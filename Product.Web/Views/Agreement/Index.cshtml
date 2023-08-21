@@ -1,0 +1,181 @@
+﻿@{
+    ViewBag.Title = "Agreement List";
+}
+
+<h2>Agreement CRUD Operations</h2>
+
+<a class="btn btn-success" style="margin-bottom:10px" onclick="PopupForm('@Url.Action("AddOrEdit","Agreement")')"><i class="fa fa-plus"></i> New Agreement</a>
+<table id="agreementTable" class="table table-striped table-bordered" style="width:100%">
+    <thead>
+        <tr>
+            <th>Product Group Code</th>
+            <th>Product Number</th>
+            <th>Effective Date</th>
+            <th>Expiration Date</th>
+            <th>Product Price</th>
+            <th>New Price</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+</table>
+
+<link href="https://cdn.datatables.net/1.10.15/css/dataTables.bootstrap.min.css" rel="stylesheet" />
+<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+
+@section scripts{
+    <script src="//cdn.datatables.net/1.10.15/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.15/js/dataTables.bootstrap.min.js"></script>
+
+    <script>
+        var Popup, dataTable;
+        $(document).ready(function () {
+            dataTable =  $("#agreementTable").DataTable({
+                "ajax": {
+                    "url": "/Agreement/GetData",
+                    "type": "GET",
+                    "datatype": "json"
+                },
+                "columns": [
+                    {
+                        "data": "ProductGroup.GroupCode",
+                        "render": function (data, type, full, meta) {
+                            return '<span data-toggle="tooltip" title="' + full.ProductGroup.GroupDescription + '">' + full.ProductGroup.GroupCode + '</span>';
+                        }
+                    },
+
+                    {
+                        "data": "Product.ProductNumber",
+                        "render": function (data, type, full, meta) {
+                            return '<span data-toggle="tooltip" title="' + full.Product.ProductDescription + '">' + full.Product.ProductNumber + '</span>';
+                        }
+                    },
+
+                    {
+                        "data": "EffectiveDate", "render": function (data) {
+                            if (data === null) return "";
+
+                            var pattern = /Date\(([^)]+)\)/;
+                            var results = pattern.exec(data);
+                            var dt = new Date(parseFloat(results[1]));
+
+                            return (dt.getMonth() + 1) + "/" + dt.getDate() + "/" + dt.getFullYear();
+                        }
+                    },
+                    {
+                        "data": "ExpirationDate", "render": function (data) {
+                            if (data === null) return "";
+
+                            var pattern = /Date\(([^)]+)\)/;
+                            var results = pattern.exec(data);
+                            var dt = new Date(parseFloat(results[1]));
+
+                            return (dt.getMonth() + 1) + "/" + dt.getDate() + "/" + dt.getFullYear();
+                        }
+                    },
+                    { "data": "ProductPrice" },
+                    { "data": "NewPrice" },
+                    {
+                        "data": "Active",
+                        "render": function (data) {
+                            if (data) {
+                                return '<span class="label label-success">Active</span>';
+                            }
+                            else {
+                                return '<span class="label label-danger">InActive</span>';
+                            }
+                        }
+                    },
+                    {
+                        "data": "Id",
+                        "render": function (data) {
+                        return "<a class='btn btn-default btn-sm' onclick=PopupForm('@Url.Action("AddOrEdit","Agreement")/" + data + "')><i class='fa fa-pencil'></i> Edit</a><a class='btn btn-danger btn-sm' style='margin-left:5px' onclick=Delete("+data+")><i class='fa fa-trash'></i> Delete</a>";
+                        },
+                        "orderable": false,
+                        "searchable":false,
+                        "width":"150px"
+                    }
+                    
+
+                ],
+                "language": {
+
+                    "emptyTable" : "No data found, Please click on <b>Add New</b> Button"
+                }
+            });
+        });
+        function PopupForm(url) {
+            var formDiv = $('#agreementModal');
+
+            // Close any existing dialog before opening a new one
+            if (Popup) {
+                Popup.dialog('close');
+                Popup.dialog('destroy').remove();
+            }
+
+            $.get(url)
+                .done(function (response) {
+                    formDiv.html(response);
+
+                    Popup = formDiv.dialog({
+                        autoOpen: true,
+                        resizable: false,
+                        title: 'Fill ProductGroup Detail',
+                        height: 500,
+                        width: 700,
+                        close: function () {
+                            Popup.dialog('close');
+                        }
+                    });
+                });
+        }
+        function SubmitForm(form) {
+            $.validator.unobtrusive.parse(form);
+            if($(form).valid()){
+                $.ajax({
+                    type : "POST",
+                    url : form.action,
+                    data : $(form).serialize(),
+                    success : function (data) {
+                        if(data.success)
+                        {
+                            Popup.dialog('close');
+                            dataTable.ajax.reload();
+
+                            $.notify(data.message,{
+                                globalPosition :"top center",
+                                className : "success"
+                            })
+
+                        }
+                    }
+                });
+            }
+            return false;
+        }
+
+        function Delete(id) {
+            if(confirm('Are You Sure to Delete this Agreement Record ?'))
+            {
+                $.ajax({
+                    type: "POST",
+                    url: '@Url.Action("Delete","Agreement")/' + id,
+                    success: function (data) {
+                        if (data.success)
+                        {
+                            dataTable.ajax.reload();
+
+                            $.notify(data.message, {
+                                globalPosition: "top center",
+                                className: "success"
+                            })
+
+                        }
+                    }
+
+                });
+            }
+        }
+    </script>
+    <div id="agreementModal"></div>
+}
